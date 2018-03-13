@@ -1,0 +1,147 @@
+---
+title: "Getting and cleaning data Project"
+author: "Yan"
+date: "3/12/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# About the project
+
+> One of the most exciting areas in all of data science right now is wearable computing - see for example 
+> this article . Companies like Fitbit, Nike, and Jawbone Up are racing to develop the most advanced 
+> algorithms to attract new users. The data linked to from the course website represent data collected 
+> from the accelerometers from the Samsung Galaxy S smartphone. A full description is available at the 
+> site where the data was obtained:
+> http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones  
+> Here are the data for the project: 
+> https://d396qusza40orc.cloudfront.net/getdata%2Fprojectles%2FUCI%20HAR%20Dataset.zip 
+
+
+** Project requirements **
+
+ [x] 1. Merges the training and the test sets to create one data set.
+ 
+ [x] 2. Extracts only the measurements on the mean and standard deviation for each measurement.
+ 
+ [x] 3. Uses descriptive activity names to name the activities in the data set
+ 
+ [x] 4. Appropriately labels the data set with descriptive variable names.
+ 
+ [x] 5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+
+Download source data and unzip
+
+```{r download}
+setwd("~/GoogleDrive/workshop/Data Science Specialization/03_Getting and Cleaning Data/project/")
+fname="FUCI HAR Dataset.zip"
+furl="https://d396qusza40orc.cloudfront.net/getdata%2Fproject les%2FUCI%20HAR%20Dataset.zip"
+if(!file.exists(fname)) {download.file(furl,fname)}
+unzip(fname)
+list.files("UCI HAR Dataset/",recursive = TRUE)
+```
+
+Check the files, read instructions
+
+The structure of raw data:
+
+* 'train/X_train.txt': Training set, dimension=7352*561.
+* 'train/y_train.txt': Training labels, dimension=7352*1.
+* 'train/subject_train.txt': subject for training set data, dimension=7352*1
+* 'features.txt': contains column names for data in X_train.txt
+
+test data has similar structure
+
+
+```{r readInput}
+trainX<-read.table("UCI HAR Dataset/train/X_train.txt")
+trainY<-read.table("UCI HAR Dataset/train/y_train.txt")
+trainsub<-read.table("UCI HAR Dataset/train/subject_train.txt")
+testX<-read.table("UCI HAR Dataset/test/X_test.txt")
+testY<-read.table("UCI HAR Dataset/test/y_test.txt")
+testsub<-read.table("UCI HAR Dataset/test/subject_test.txt")
+cnametb<-read.table("UCI HAR Dataset/features.txt")
+dim(trainX)
+dim(trainY)
+dim(trainsub)
+dim(testX)
+dim(testY)
+dim(testsub)
+dim(cnametb)
+
+```
+
+
+** Merges the training and the test sets to create one data set **
+
+```{r mergedata}
+combX<-rbind(trainX,testX)
+combY<-rbind(trainY,testY)
+combsub<-rbind(trainsub,testsub)
+
+combone<-cbind(combsub,combY,combX)
+dim(combone)
+Xname<-as.vector(cnametb[,2])
+names(combone)<-c("Subject","Activity",Xname)
+```
+
+
+** Extracts only the measurements on the mean and standard deviation for each measurement **
+
+
+```{r meanstd}
+meanstdcol<-grep("mean|std",ignore.case = TRUE,names(combone))
+# check the name of selected columns
+# names(combone)[meanstdcol]
+combonems<-combone[,c(1,2,meanstdcol)]
+dim(combonems)
+```
+
+
+** Uses descriptive activity names to name the activities in the data set **
+
+```{r activitynames}
+acttb<-read.table("UCI HAR Dataset/activity_labels.txt")
+actnum<-acttb$V1
+actchar<-as.vector(acttb$V2)
+library(plyr)
+combonems$Activity<-mapvalues(combone$Activity,from=actnum,to=actchar)
+
+```
+
+
+** Appropriately labels the data set with descriptive variable names **
+
+```{r descname}
+names(combonems)<-gsub("\\(\\)","",names(combonems))
+```
+
+
+** From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject **
+
+```{r avgdata}
+library(dplyr)
+bygroup<-group_by(combonems,Activity,Subject)
+comb2<-summarize_all(bygroup,mean)
+```
+
+
+** write to file **
+
+```{r genfile}
+write.table(combonems, file="tidyData1.txt")
+write.table(comb2,file="tidyData2.txt")
+```
+
+
+
+
+
+
